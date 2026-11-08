@@ -386,8 +386,7 @@ void Lizard::sago2MonkeyGrassIsSafe()
 		cout << flush;
     }
 
-	
-
+	sem_wait(&driveway); // MV
 
 	if (debug)
     {
@@ -473,11 +472,7 @@ void Lizard::madeIt2MonkeyGrass()
 		cout << "[" << _id << "] made the  sago -> monkey grass  crossing" << endl;
 		cout << flush;
     }
-
-
-
-
-
+	sem_post(&driveway); // MV
 }
 
 
@@ -526,9 +521,7 @@ void Lizard::monkeyGrass2SagoIsSafe()
 		cout << flush;
     }
 
-
-
-
+	sem_wait(&driveway); // MV
 
 	if (debug)
     {
@@ -614,6 +607,7 @@ void Lizard::madeIt2Sago()
 		cout << "[" << _id << "] made the  monkey grass -> sago  crossing" << endl;
 		cout << flush;
     }
+	sem_post(&driveway); // MV
 }
 
 /**
@@ -645,24 +639,18 @@ void Lizard::lizardThread(Lizard *aLizard)
        * are already completed - see the comments.
        */
 
+	   aLizard->sleepNow(); // MV
 
+	   aLizard->sago2MonkeyGrassIsSafe(); // MV
+	   aLizard->crossSago2MonkeyGrass(); // MV
+	   aLizard->madeIt2MonkeyGrass(); // MV
 
+	   aLizard->eat(); // MV
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    }
+	   aLizard->monkeyGrass2SagoIsSafe(); // MV
+	   aLizard->crossMonkeyGrass2Sago(); // MV
+	   aLizard->madeIt2Sago(); // MV
+	}
 
 }
  
