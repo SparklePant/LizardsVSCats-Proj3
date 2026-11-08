@@ -26,6 +26,9 @@
 #include <mutex>
 #include <vector>
 
+#include <semaphore.h> // SP
+#include <pthread.h>  //SP
+
 
 using namespace std;
 
@@ -95,6 +98,9 @@ using namespace std;
  * Declare global variables here
  */
 
+sem_t driveway; // SP
+pthread_mutex_t counterLock; // SP
+int maxCrossing = 0; // SP tracks the most lizards seen crossing 
 
 /**************************************************/
 /* Please leave these variables alone.  They are  */
@@ -121,6 +127,7 @@ class Cat {
 	
 	public:
 		Cat (int id);
+    ~Cat(); // SP
 		int getId();
 		void run();
 		void wait();
@@ -139,6 +146,7 @@ class Cat {
 Cat::Cat (int id)
 {
 	_id = id;
+_catThread = NULL; // SP
 }
 
 /**
@@ -151,26 +159,35 @@ int Cat::getId()
 	return _id;
 }
 
+Cat::~Cat() // SP
+{
+	delete _catThread; // SP frees the thread object to avoid a memory leak
+}
+
 
 /**
  * Launches a cat thread.
  * 
- * Status: Incomplete - Make changes to this code.
+ * Status: Incomplete - Make changes to this code. ** CHANGES MADE **
  */
  void Cat::run() 
  {
-	 // launch the thread to simulate the cat's behavior	 
+	 // launch the thread to simulate the cat's behavior
+   _catThread = new thread ( catThread, this); //SP	 
 	 
  }
  
  /**
   * Waits for a cat to finish running.
   *
-  * Status: Incomplete - Make changes to this code.
+  * Status: Incomplete - Make changes to this code. ** CHANGES MADE **
   */
  void Cat::wait()
  {
 	 // wait for the thread to terminate
+  if (_catThread != NULL) { // SP
+        _catThread->join(); // SP
+    }
  }
  
  
@@ -212,7 +229,7 @@ void Cat::sleepNow()
   * 
   * @return - N/A
   *
-  * Status: Incomplete - Make changes as you see are necessary.
+  * Status: Incomplete - Make changes as you see are necessary. ** CHANGES MADE **
   */
 void Cat::catThread (Cat *aCat)
 {
@@ -232,11 +249,13 @@ void Cat::catThread (Cat *aCat)
 		/*
 	     * Check for too many lizards crossing
 	     */
+    pthread_mutex_lock(&counterLock); // SP
 		if (numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago > MAX_LIZARD_CROSSING)
 		{
 		  cout << "\tThe cats are happy - they have toys.\n";
 		  exit( -1 );
 		}
+    pthread_mutex_unlock(&counterLock); // SP
     }
 }
 
@@ -248,6 +267,8 @@ class Lizard {
 
 	public:
 		Lizard(int id);
+    ~Lizard(); // SP
+
 		int getId();
         void run();
         void wait();
@@ -275,6 +296,12 @@ class Lizard {
 Lizard::Lizard (int id)
 {
 	_id = id;
+  _aLizard = NULL; //SP
+}
+
+Lizard::~Lizard() // SP
+{
+	delete _aLizard; // SP frees the thread object to avoid a memory leak
 }
 
 /**
@@ -375,7 +402,7 @@ void Lizard::sago2MonkeyGrassIsSafe()
  * Delays for 1 second to simulate crossing from the sago to
  * the monkey grass. 
  *
- * Status: Incomplete - Make changes as you see are necessary.
+ * Status: Incomplete - Make changes as you see are necessary. ** CHANGES MADE **
  */
 void Lizard::crossSago2MonkeyGrass()
 {
@@ -385,10 +412,23 @@ void Lizard::crossSago2MonkeyGrass()
       cout << flush;
     }
 
+    pthread_mutex_lock(&counterLock); // SP
+
 	/*
 	 * One more crossing this way
 	 */
 	numCrossingSago2MonkeyGrass++;
+
+  // record the highest simultaneous crossing count for the report
+	if (numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago > maxCrossing) // SP
+		maxCrossing = numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago; // SP
+
+
+    	if (debug) // SP
+	{
+		cout << "\tcrossing total: " << numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago << endl; // SP
+		cout << flush; // SP
+	}
 
 	/*
      * Check for lizards cross both ways
@@ -401,16 +441,20 @@ void Lizard::crossSago2MonkeyGrass()
 		exit( -1 );
     }
 
+  pthread_mutex_unlock(&counterLock); // SP release before sleeping to allow other lizards to cross
 
 	/*
      * It takes a while to cross, so simulate it
      */
 	sleep( CROSS_SECONDS );
 
+  pthread_mutex_lock(&counterLock); // SP
+
     /*
      * That one seems to have made it
      */
     numCrossingSago2MonkeyGrass--;
+    pthread_mutex_unlock(&counterLock); // SP
 }
 
 
@@ -499,7 +543,7 @@ void Lizard::monkeyGrass2SagoIsSafe()
  * Delays for 1 second to simulate crossing from the monkey
  * grass to the sago. 
  *
- * Status: Incomplete - Make changes as you see are necessary.
+ * Status: Incomplete - Make changes as you see are necessary.  ** CHANGES MADE **
  */
 void Lizard::crossMonkeyGrass2Sago()
 {
@@ -509,11 +553,22 @@ void Lizard::crossMonkeyGrass2Sago()
 		cout << flush;
     }
 
+    pthread_mutex_lock(&counterLock); // SP
+
     /*
      * One more crossing this way
      */
 	numCrossingMonkeyGrass2Sago++;
 
+  	// record the highest simultaneous crossing count for the report
+	  if (numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago > maxCrossing) // SP
+		  maxCrossing = numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago; // SP
+
+    if (debug) // SP
+	  {
+		  cout << "\tcrossing total: " << numCrossingSago2MonkeyGrass + numCrossingMonkeyGrass2Sago << endl; //SP
+	  	cout << flush; // SP
+	  }
   
     /*
      * Check for lizards cross both ways
@@ -526,20 +581,25 @@ void Lizard::crossMonkeyGrass2Sago()
 		exit( -1 );
     }
 
+    pthread_mutex_unlock(&counterLock); // SP
+
 	/*
      * It takes a while to cross, so simulate it
      */
 	sleep( CROSS_SECONDS );
 
+  pthread_mutex_lock(&counterLock); // SP
+
 	/*
      * That one seems to have made it
      */
 	numCrossingMonkeyGrass2Sago--;
+
+  pthread_mutex_unlock(&counterLock); // SP
 }
 
 
 /**
- *
  * Tells others they can go now
  *
  * Status: Incomplete - Make changes as you see are necessary.
@@ -615,14 +675,14 @@ void Lizard::lizardThread(Lizard *aLizard)
  * Should initialize variables, locks, semaphores, etc.
  * Should start the cat thread and the lizard threads
  * Should block until all threads have terminated
- * Status: Incomplete - Make changes to this code.
+ * Status: Incomplete - Make changes to this code. ** CHANGES MADE **
  */
 int main(int argc, char **argv)
 {
 	/*
 	 * Declare local variables
      */
-
+  	vector<Cat*> allCats; // SP
 
 
 
@@ -653,6 +713,8 @@ int main(int argc, char **argv)
      * Initialize locks and/or semaphores
      */
 
+  sem_init(&driveway, 0, MAX_LIZARD_CROSSING); // SP 4 slots; 0 = shared between threads of one process
+	pthread_mutex_init(&counterLock, NULL); //SP
 
 
 
@@ -668,7 +730,10 @@ int main(int argc, char **argv)
     /*
      * Create NUM_CATS cat threads
      */
-	 
+
+    for (int i=0; i < NUM_CATS; i++) { // SP
+	    allCats.push_back(new Cat(i)); //SP
+    } //SP
 
 	/*
 	 * Run NUM_LIZARDS and NUM_CATS threads
@@ -676,6 +741,10 @@ int main(int argc, char **argv)
     for (int i=0; i < NUM_LIZARDS; i++) {
         allLizards[i]->run();
     }
+    for (int i=0; i < NUM_CATS; i++) { // SP
+		    allCats[i]->run(); // SP
+	  } //SP
+
 
 	/*
      * Now let the world run for a while
@@ -693,6 +762,16 @@ int main(int argc, char **argv)
      * Wait until all threads terminate
      */
 
+    for (int i=0; i < NUM_LIZARDS; i++) { // SP
+		  allLizards[i]->wait(); //SP
+	  } // SP
+	  for (int i=0; i < NUM_CATS; i++) { //SP
+		  allCats[i]->wait(); // SP
+	  } // SP
+
+	  cout << "Max lizards crossing at once: " << maxCrossing << endl; //SP for the results table
+
+
 
 
 
@@ -701,13 +780,20 @@ int main(int argc, char **argv)
 	/*
      * Delete the locks and semaphores
      */
-	 
+	sem_destroy(&driveway); // SP
+	pthread_mutex_destroy(&counterLock); // SP
 	 
 	 
 	/*
 	 * Delete all cat and lizard objects
 	 */
- 
+for (int i=0; i < NUM_CATS; i++) { // SP
+		delete allCats[i]; //SP
+	} // SP
+	for (int i=0; i < NUM_LIZARDS; i++) { //SP
+		delete allLizards[i]; // SP
+	} //SP
+
 
 
 
