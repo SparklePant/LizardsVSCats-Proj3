@@ -56,17 +56,17 @@ using namespace std;
  * be simulated.  
  * Try 30 for development and 120 for more thorough testing.
  */
-#define WORLDEND             30
+#define WORLDEND             180 // MV -testing
 
 /*
  * Number of lizard threads to create
  */
-#define NUM_LIZARDS          20
+#define NUM_LIZARDS          20 // MV -testing
 
 /*
  * Number of cat threads to create
  */
-#define NUM_CATS             2
+#define NUM_CATS             2 // MV -testing
 
 /*	
  * Maximum lizards crossing at once before alerting cats
@@ -240,10 +240,17 @@ void Cat::catThread (Cat *aCat)
 		cout << flush;
     }
 
-	while(running)
+	while(true) // MV
     {
-		aCat->sleepNow();
+		pthread_mutex_lock(&counterLock); // MV
+		bool keepRunning = (running != 0); // MV
+		pthread_mutex_unlock(&counterLock); // MV
 
+		if (!keepRunning) { // MV
+			break; // MV
+		} // MV
+
+		aCat->sleepNow();
 
 
 		/*
@@ -629,7 +636,7 @@ void Lizard::lizardThread(Lizard *aLizard)
       cout << flush;
     }
 
-	while(running)
+	while(true) // MV
     {
       /* 
        * Follow the algorithm given in the assignment
@@ -638,6 +645,14 @@ void Lizard::lizardThread(Lizard *aLizard)
        * some functions by filling in the code.  Some  
        * are already completed - see the comments.
        */
+
+	   pthread_mutex_lock(&counterLock); // MV
+	   bool keepRunning = (running != 0); // MV
+	   pthread_mutex_unlock(&counterLock); // MV
+
+	   if (!keepRunning) { // MV
+		break; // MV
+	   } // MV
 
 	   aLizard->sleepNow(); // MV
 
@@ -743,7 +758,9 @@ int main(int argc, char **argv)
 	/*
      * That's it - the end of the world
      */
+	pthread_mutex_lock(&counterLock); // MV
 	running = 0;
+	pthread_mutex_unlock(&counterLock); // MV
 
 
     /*
